@@ -38,7 +38,11 @@ failed) updating plan + credits via a service-role client, cancellation
 that keeps Pro until period end then reverts to Free, plus billing and
 account settings pages.
 
-Phase 6 (security hardening / polish) is the remaining phase.
+**Phase 6 complete:** security headers + `poweredByHeader` off, auth
+rate limiting (brute-force brake on login/signup), and polished
+error / not-found / loading states.
+
+All six MVP phases are implemented.
 
 ## Tech stack
 
@@ -255,3 +259,40 @@ ai-companion/
     0003_credits.sql
   .env.example
 ```
+
+## Security
+
+- **Route protection** in `proxy.ts` (Next 16 proxy) using
+  `supabase.auth.getUser()` (revalidated, not the spoofable cookie), with a
+  server-side session re-check in the dashboard layout (defense in depth).
+- **Row Level Security** on every table — users can only read/write their
+  own rows. The companion is created only via an atomic SECURITY DEFINER
+  function; image credits are debited only via SECURITY DEFINER functions
+  keyed to `auth.uid()` (the frontend count is display-only).
+- **Storage** is a private bucket scoped to `<user-id>/…`; images are
+  served via short-lived signed URLs.
+- **Server-trust**: all validation, one-time-creation checks, credit
+  accounting, and moderation run server-side. The service-role key is used
+  **only** in the signature-verified Stripe webhook.
+- **Moderation** (deterministic blocklist + optional provider check) gates
+  companion creation, gallery prompts, and chat input. Prompts force an
+  adult, non-explicit, original fictional character.
+- **Abuse brakes**: in-memory rate limits on chat, image generation, and
+  auth (login/signup).
+- **Hardening**: security headers, `X-Powered-By` removed, secrets only in
+  env vars, AI disclaimer surfaced throughout.
+
+## Production notes & assumptions
+
+- App lives in `ai-companion/` (the repo already contained other content).
+- Without `OPENAI_API_KEY` the app uses a local placeholder image and a
+  labelled demo chat reply, so every flow is testable without paid keys.
+- Image identity consistency is text-prompt only (no image reference) —
+  an accepted MVP limitation.
+- Rate limiting is per-process in-memory; use Upstash/Redis when scaling
+  to multiple instances.
+- Legal pages (`/terms`, `/privacy`, `/ai-disclaimer`) are placeholders —
+  replace with professionally reviewed copy before launch.
+- 18+ only: companions are fictional adult characters; the app blocks
+  minors, real-person/celebrity likenesses, and explicit/non-consensual
+  content.

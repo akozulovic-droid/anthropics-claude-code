@@ -9,11 +9,18 @@ import {
   normalizeEmail,
   passwordError,
 } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export type AuthState = {
   error?: string;
   notice?: string;
 };
+
+async function clientIp(): Promise<string> {
+  const h = await headers();
+  const fwd = h.get("x-forwarded-for");
+  return fwd?.split(",")[0]?.trim() || "unknown";
+}
 
 async function appOrigin(): Promise<string> {
   const fromEnv = process.env.NEXT_PUBLIC_APP_URL;
@@ -39,6 +46,12 @@ export async function signUpAction(
   if (pwErr) return { error: pwErr };
   if (!ageConfirmed) {
     return { error: "You must confirm that you are 18 years or older." };
+  }
+
+  // Basic abuse brake: 5 sign-up attempts / 10 min per IP.
+  const ip = await clientIp();
+  if (!checkRateLimit(`signup:${ip}`, 5, 10 * 60_000).allowed) {
+    return { error: "Too many attempts. Please try again later." };
   }
 
   const supabase = await createClient();
@@ -72,6 +85,14 @@ export async function signInAction(
 
   if (!isValidEmail(email) || password.length === 0) {
     return { error: "Please enter your email and password." };
+  }
+
+  // Basic brute-force brake: 8 attempts / 5 min per IP + email.
+  const ip = await clientIp();
+  if (!checkRateLimit(`login:${ip}:${email}`, 8, 5 * 60_000).allowed) {
+    return {
+      error: "Too many login attempts. Please wait a few minutes.",
+    };
   }
 
   const supabase = await createClient();
