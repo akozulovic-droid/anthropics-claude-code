@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ImagePlus, Loader2, Sparkles } from "lucide-react";
@@ -87,9 +88,14 @@ export function ImageGenerator({
             </p>
             <p className="mt-1 text-muted-foreground">
               {plan === "free"
-                ? "Upgrade to Pro for 20 images per month (subscription management arrives in Phase 5)."
+                ? "Upgrade to Pro for 20 images per month."
                 : "Your credits reset at the start of next month."}
             </p>
+            {plan === "free" && (
+              <Button asChild size="sm" className="mt-3">
+                <Link href="/dashboard/billing">Upgrade to Pro</Link>
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">

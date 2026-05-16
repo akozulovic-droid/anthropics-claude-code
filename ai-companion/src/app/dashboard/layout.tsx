@@ -5,9 +5,16 @@ import { hasSupabaseEnv } from "@/lib/supabase/config";
 // Auth depends on per-request cookies — never prerender this subtree.
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { signOutAction } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+
+const NAV = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/billing", label: "Billing" },
+  { href: "/dashboard/settings", label: "Settings" },
+];
 
 export default async function DashboardLayout({
   children,
@@ -34,9 +41,25 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="text-lg font-semibold tracking-tight brand-text">
-            Aura
-          </span>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/dashboard"
+              className="text-lg font-semibold tracking-tight brand-text"
+            >
+              Aura
+            </Link>
+            <nav className="hidden gap-4 sm:flex">
+              {NAV.map((n) => (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  {n.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
           <div className="flex items-center gap-4">
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {user.email}

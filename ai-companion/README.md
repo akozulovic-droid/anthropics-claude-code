@@ -32,7 +32,13 @@ with automatic period reset and credit refund on failure, moderation +
 rate limiting, an upgrade message when credits run out, and an owner-only
 gallery (main + generated images, with dates).
 
-Phases 5–6 (Stripe subscription, polish) are scaffolded as placeholders.
+**Phase 5 complete:** Stripe Pro subscription — Checkout, Customer Portal,
+signature-verified webhooks (subscription created/updated/deleted, payment
+failed) updating plan + credits via a service-role client, cancellation
+that keeps Pro until period end then reverts to Free, plus billing and
+account settings pages.
+
+Phase 6 (security hardening / polish) is the remaining phase.
 
 ## Tech stack
 
@@ -87,7 +93,25 @@ npm run dev
 
 Open http://localhost:3000.
 
-### 3. AI image generation (optional for testing)
+### 3. Stripe (optional for testing)
+
+The app runs without Stripe (billing UI shows a "not configured" notice).
+To enable subscriptions:
+
+1. Create a **recurring Price** for the Pro plan in the Stripe Dashboard;
+   put its id in `STRIPE_PRICE_ID`.
+2. Set `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
+3. Enable the **Customer Portal** in the Stripe Dashboard
+   (Settings → Billing → Customer portal).
+4. Forward webhooks locally:
+   ```bash
+   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   ```
+   Put the printed signing secret in `STRIPE_WEBHOOK_SECRET`.
+5. `SUPABASE_SERVICE_ROLE_KEY` must be set — the webhook updates the
+   database with no user session.
+
+### 4. AI image generation (optional for testing)
 
 Set `OPENAI_API_KEY` to generate real portraits via the OpenAI Images API.
 **If left unset**, the app generates a deterministic local SVG placeholder so
@@ -101,6 +125,9 @@ the entire creation flow still works without a paid key.
 - [ ] Email confirmation enabled in Supabase
 - [ ] `http://localhost:3000/auth/callback` added to Supabase redirect URLs
 - [ ] (Optional) `OPENAI_API_KEY` set for real image generation
+- [ ] (Optional) Stripe: `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`,
+      `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, Customer Portal
+      enabled
 
 ## How to test Phase 1 locally
 
@@ -172,6 +199,27 @@ the entire creation flow still works without a paid key.
    RLS keeps them private to the owner.
 6. **Moderation** — a disallowed prompt is rejected with no credit spent.
 
+## How to test Phase 5 locally
+
+1. **Billing page** — `/dashboard/billing` shows the current plan. Without
+   Stripe env it shows a "not configured" notice.
+2. **Upgrade** — with Stripe + `stripe listen` running, click "Upgrade to
+   Pro", complete Checkout with test card `4242 4242 4242 4242`.
+3. **Plan flips to Pro** — the webhook sets `plan=pro` and
+   `monthly_image_limit=20`; the dashboard credit card and billing page
+   update (refresh after a moment).
+4. **Customer Portal** — "Manage subscription" opens the Stripe portal;
+   cancel there.
+5. **Cancellation** — after canceling, you keep Pro until the period end;
+   when Stripe sends `customer.subscription.deleted`, plan reverts to Free
+   (3 credits). Use `stripe trigger customer.subscription.deleted` to test.
+6. **Payment failed** — `stripe trigger invoice.payment_failed` sets
+   `subscription_status=past_due`.
+7. **Security** — POST to `/api/stripe/webhook` without a valid signature
+   returns HTTP 400.
+8. **Settings** — `/dashboard/settings` shows email, plan, and billing
+   link.
+
 ## Project structure
 
 ```
@@ -188,16 +236,19 @@ ai-companion/
       auth/callback/route.ts     # email-confirmation handler -> /login
       api/chat/route.ts          # chat endpoint (rate-limited, moderated)
       api/images/route.ts        # image gen (credits + moderation + rate)
+      api/stripe/webhook/route.ts# signature-verified Stripe webhook
       dashboard/                 # protected (page, layout, actions.ts)
+        billing/                 # plan, checkout, portal (page + actions)
+        settings/                # account settings
       terms|privacy|ai-disclaimer/
     components/
       dashboard/                 # create form, profile, chat, generator, gallery
       ui|auth|legal|site-footer
     lib/
-      supabase/                  # client / server / proxy / config
+      supabase/                  # client / server / admin / proxy / config
       ai/                        # prompt / moderation / image / chat
       companion/options.ts       # allowed params + strict server parsing
-      credits.ts rate-limit.ts storage.ts validation.ts types.ts
+      stripe.ts credits.ts rate-limit.ts storage.ts validation.ts types.ts
   supabase/migrations/
     0001_profiles.sql
     0002_companion.sql
