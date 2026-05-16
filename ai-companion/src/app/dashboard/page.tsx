@@ -1,18 +1,23 @@
 import type { Metadata } from "next";
-import { Sparkles, ImagePlus, MessageCircleHeart, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile } from "@/lib/types";
+import type { AiGirl, Profile } from "@/lib/types";
+import { getSignedUrl } from "@/lib/storage";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CreateCompanionForm } from "@/components/dashboard/create-companion-form";
+import { CompanionProfile } from "@/components/dashboard/companion-profile";
 
 export const metadata: Metadata = {
   title: "Dashboard — Aura",
 };
+
+// Image generation runs inside the create server action; allow more time.
+export const maxDuration = 60;
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -26,6 +31,16 @@ export default async function DashboardPage() {
     .eq("id", user!.id)
     .single<Profile>();
 
+  const { data: aiGirl } = await supabase
+    .from("ai_girls")
+    .select("*")
+    .eq("user_id", user!.id)
+    .maybeSingle<AiGirl>();
+
+  const imageUrl = aiGirl
+    ? await getSignedUrl(supabase, aiGirl.main_image_url)
+    : null;
+
   const name = profile?.full_name || user?.email?.split("@")[0] || "there";
   const plan = profile?.plan ?? "free";
   const limit = profile?.monthly_image_limit ?? 3;
@@ -38,7 +53,9 @@ export default async function DashboardPage() {
           Welcome, {name}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Here&apos;s your companion workspace.
+          {aiGirl
+            ? `Your companion ${aiGirl.name} is ready.`
+            : "Let's create your AI companion."}
         </p>
       </div>
 
@@ -48,8 +65,8 @@ export default async function DashboardPage() {
           <div>
             <p className="font-medium">Profile not found</p>
             <p className="text-muted-foreground">
-              Your profile row could not be loaded. Make sure the database
-              migration in <code>supabase/migrations</code> has been applied.
+              Apply the migrations in <code>supabase/migrations</code> (0001
+              and 0002) in your Supabase SQL editor.
             </p>
           </div>
         </div>
@@ -78,55 +95,16 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardDescription>AI companion</CardDescription>
-            <CardTitle>
-              {profile?.ai_girl_created ? "Created" : "Not created yet"}
-            </CardTitle>
+            <CardTitle>{aiGirl ? "Created" : "Not created yet"}</CardTitle>
           </CardHeader>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Sparkles className="size-5 text-primary" />
-            Your AI companion
-          </CardTitle>
-          <CardDescription>
-            Companion creation, chat, and image generation arrive in the next
-            phases.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                icon: Sparkles,
-                label: "Create companion",
-                hint: "One-time, permanent setup (Phase 2)",
-              },
-              {
-                icon: MessageCircleHeart,
-                label: "Chat",
-                hint: "Context-aware conversations (Phase 3)",
-              },
-              {
-                icon: ImagePlus,
-                label: "Generate images",
-                hint: "Credit-based gallery (Phase 4)",
-              },
-            ].map(({ icon: Icon, label, hint }) => (
-              <div
-                key={label}
-                className="rounded-md border border-dashed border-border p-4"
-              >
-                <Icon className="size-5 text-muted-foreground" />
-                <p className="mt-3 font-medium">{label}</p>
-                <p className="text-sm text-muted-foreground">{hint}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {aiGirl ? (
+        <CompanionProfile aiGirl={aiGirl} imageUrl={imageUrl} />
+      ) : (
+        <CreateCompanionForm />
+      )}
     </div>
   );
 }
