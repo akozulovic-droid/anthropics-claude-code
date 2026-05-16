@@ -16,6 +16,7 @@ All templates encode the same minimal example (`permissions.disableBypassPermiss
 | [`macos/com.anthropic.claudecode.plist`](./macos/com.anthropic.claudecode.plist) | Jamf or Iru (Kandji) **Custom Settings** payload. Preference domain: `com.anthropic.claudecode`. |
 | [`macos/com.anthropic.claudecode.mobileconfig`](./macos/com.anthropic.claudecode.mobileconfig) | Full configuration profile for local testing or MDMs that take a complete profile. |
 | [`windows/Set-ClaudeCodePolicy.ps1`](./windows/Set-ClaudeCodePolicy.ps1) | Intune **Platform scripts**. Writes `managed-settings.json` to `C:\Program Files\ClaudeCode\`. |
+| [`windows/Set-GitBashPath.ps1`](./windows/Set-GitBashPath.ps1) | Intune **Platform scripts**. Sets the `CLAUDE_CODE_GIT_BASH_PATH` machine environment variable when Git is installed to a non-default directory. |
 | [`windows/ClaudeCode.admx`](./windows/ClaudeCode.admx) + [`en-US/ClaudeCode.adml`](./windows/en-US/ClaudeCode.adml) | Group Policy or Intune **Import ADMX**. Writes `HKLM\SOFTWARE\Policies\ClaudeCode\Settings` (REG_SZ, single-line JSON). |
 
 ## Tips
