@@ -20,7 +20,13 @@ prompt generation, main image generation, atomic one-time companion creation
 (enforced in DB + UI), and the dashboard creation form + permanent profile
 display.
 
-Phases 3–6 (chat, extra image generation, Stripe, polish) are scaffolded as
+**Phase 3 complete:** persisted chat with the companion. Safety-guarded
+system prompt (never claims to be real, discourages emotional dependency),
+context-aware replies (recent history sent to the model), input moderation,
+in-memory per-user rate limiting, and a polished chat UI with history,
+optimistic send, typing indicator, and empty/error states.
+
+Phases 4–6 (extra image generation, Stripe, polish) are scaffolded as
 dashboard placeholders.
 
 ## Tech stack
@@ -124,6 +130,22 @@ the entire creation flow still works without a paid key.
    `companion-images/<your-user-id>/main.*` and the bucket is private (the
    image renders via a short-lived signed URL).
 
+## How to test Phase 3 locally
+
+1. **Chat** — with a companion created, the chat panel shows on
+   `/dashboard`. Send a message; the reply appears (real LLM if
+   `OPENAI_API_KEY` is set, otherwise a clearly-labelled demo reply).
+2. **History persists** — reload the page; the conversation is still there
+   (stored in `chat_messages`, owner-only via RLS).
+3. **Context** — the last 20 turns are sent to the model, so follow-up
+   questions keep context.
+4. **Moderation** — send disallowed content (e.g. minor/explicit terms);
+   the request is rejected with a safety message and nothing is saved.
+5. **Rate limiting** — sending 20+ messages within 60s returns a
+   "too fast" error (HTTP 429).
+6. **Safety persona** — ask "are you a real person?"; the companion
+   clarifies it is a fictional AI character.
+
 ## Project structure
 
 ```
@@ -138,16 +160,17 @@ ai-companion/
         login/page.tsx
         signup/page.tsx
       auth/callback/route.ts     # email-confirmation handler -> /login
+      api/chat/route.ts          # chat endpoint (rate-limited, moderated)
       dashboard/                 # protected (page, layout, actions.ts)
       terms|privacy|ai-disclaimer/
     components/
-      dashboard/                 # create form + companion profile
+      dashboard/                 # create form, profile, chat panel
       ui|auth|legal|site-footer
     lib/
       supabase/                  # client / server / proxy / config
-      ai/                        # prompt / moderation / image generation
+      ai/                        # prompt / moderation / image / chat
       companion/options.ts       # allowed params + strict server parsing
-      storage.ts validation.ts types.ts
+      rate-limit.ts storage.ts validation.ts types.ts
   supabase/migrations/
     0001_profiles.sql
     0002_companion.sql

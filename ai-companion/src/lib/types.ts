@@ -45,3 +45,14 @@ export type ImageRow = {
   image_type: ImageType;
   created_at: string;
 };
+
+export type ChatRole = "user" | "assistant";
+
+export type ChatMessageRow = {
+  id: string;
+  user_id: string;
+  ai_girl_id: string;
+  role: ChatRole;
+  content: string;
+  created_at: string;
+};

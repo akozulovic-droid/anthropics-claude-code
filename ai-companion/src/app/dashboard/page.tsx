@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { AiGirl, Profile } from "@/lib/types";
+import type { AiGirl, ChatMessageRow, Profile } from "@/lib/types";
 import { getSignedUrl } from "@/lib/storage";
 import {
   Card,
@@ -40,6 +40,17 @@ export default async function DashboardPage() {
   const imageUrl = aiGirl
     ? await getSignedUrl(supabase, aiGirl.main_image_url)
     : null;
+
+  let chatMessages: ChatMessageRow[] = [];
+  if (aiGirl) {
+    const { data: rows } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("user_id", user!.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    chatMessages = ((rows as ChatMessageRow[] | null) ?? []).reverse();
+  }
 
   const name = profile?.full_name || user?.email?.split("@")[0] || "there";
   const plan = profile?.plan ?? "free";
@@ -101,7 +112,11 @@ export default async function DashboardPage() {
       </div>
 
       {aiGirl ? (
-        <CompanionProfile aiGirl={aiGirl} imageUrl={imageUrl} />
+        <CompanionProfile
+          aiGirl={aiGirl}
+          imageUrl={imageUrl}
+          chatMessages={chatMessages}
+        />
       ) : (
         <CreateCompanionForm />
       )}

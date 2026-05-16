@@ -1,6 +1,6 @@
 import Image from "next/image";
-import { ImageOff, Lock, MessageCircleHeart, ImagePlus } from "lucide-react";
-import type { AiGirl } from "@/lib/types";
+import { ImageOff, Lock, ImagePlus } from "lucide-react";
+import type { AiGirl, ChatMessageRow } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ChatPanel } from "@/components/dashboard/chat-panel";
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
@@ -21,46 +22,48 @@ function Detail({ label, value }: { label: string; value: string }) {
 export function CompanionProfile({
   aiGirl,
   imageUrl,
+  chatMessages,
 }: {
   aiGirl: AiGirl;
   imageUrl: string | null;
+  chatMessages: ChatMessageRow[];
 }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
-      {/* Fixed main image area */}
-      <Card className="overflow-hidden">
-        <div className="relative aspect-square w-full bg-secondary">
-          {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={`Portrait of ${aiGirl.name}`}
-              fill
-              sizes="360px"
-              className="object-cover"
-              unoptimized
-              priority
-            />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-              <ImageOff className="size-8" />
-              <p className="text-sm">Image unavailable</p>
-            </div>
-          )}
-        </div>
-        <CardContent className="pt-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">{aiGirl.name}</h2>
-            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
-              <Lock className="size-3" /> Permanent
-            </span>
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
+        {/* Fixed main image area */}
+        <Card className="overflow-hidden">
+          <div className="relative aspect-square w-full bg-secondary">
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={`Portrait of ${aiGirl.name}`}
+                fill
+                sizes="340px"
+                className="object-cover"
+                unoptimized
+                priority
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                <ImageOff className="size-8" />
+                <p className="text-sm">Image unavailable</p>
+              </div>
+            )}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {aiGirl.age} · {aiGirl.personality}
-          </p>
-        </CardContent>
-      </Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">{aiGirl.name}</h2>
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+                <Lock className="size-3" /> Permanent
+              </span>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {aiGirl.age} · {aiGirl.personality}
+            </p>
+          </CardContent>
+        </Card>
 
-      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Companion profile</CardTitle>
@@ -86,22 +89,20 @@ export function CompanionProfile({
             />
           </CardContent>
         </Card>
+      </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-md border border-dashed border-border p-5">
-            <MessageCircleHeart className="size-5 text-muted-foreground" />
-            <p className="mt-3 font-medium">Chat</p>
-            <p className="text-sm text-muted-foreground">
-              Talk with {aiGirl.name} — arriving in Phase 3.
-            </p>
-          </div>
-          <div className="rounded-md border border-dashed border-border p-5">
-            <ImagePlus className="size-5 text-muted-foreground" />
-            <p className="mt-3 font-medium">Generate images</p>
-            <p className="text-sm text-muted-foreground">
-              Credit-based gallery — arriving in Phase 4.
-            </p>
-          </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,340px)]">
+        <ChatPanel
+          companionName={aiGirl.name}
+          initialMessages={chatMessages}
+        />
+
+        <div className="rounded-lg border border-dashed border-border p-6">
+          <ImagePlus className="size-5 text-muted-foreground" />
+          <p className="mt-3 font-medium">Generate images</p>
+          <p className="text-sm text-muted-foreground">
+            Credit-based image generation and gallery — arriving in Phase 4.
+          </p>
         </div>
       </div>
     </div>
