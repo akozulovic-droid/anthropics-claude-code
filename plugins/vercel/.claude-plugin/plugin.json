@@ -1,0 +1,10 @@
+{
+  "name": "vercel",
+  "description": "Deploy and manage Vercel projects — deployments, environment variables, logs, and domain management via the Vercel CLI and MCP server",
+  "version": "1.0.0",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": ["vercel", "deployment", "hosting", "serverless", "frontend"]
+}

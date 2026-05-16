@@ -1,0 +1,9 @@
+{
+  "vercel": {
+    "command": "npx",
+    "args": ["-y", "@vercel/mcp"],
+    "env": {
+      "VERCEL_TOKEN": "${VERCEL_TOKEN}"
+    }
+  }
+}
