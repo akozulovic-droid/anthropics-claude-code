@@ -121,6 +121,11 @@ Set `OPENAI_API_KEY` to generate real portraits via the OpenAI Images API.
 **If left unset**, the app generates a deterministic local SVG placeholder so
 the entire creation flow still works without a paid key.
 
+## Deployment
+
+To put the app on the internet (Vercel + Supabase + Stripe), see
+[`DEPLOYMENT.md`](./DEPLOYMENT.md).
+
 ## Manual configuration checklist
 
 - [ ] `.env.local` filled with Supabase URL + anon key
