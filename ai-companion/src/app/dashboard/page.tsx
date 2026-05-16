@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
 import { AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { AiGirl, ChatMessageRow, Profile } from "@/lib/types";
+import type {
+  AiGirl,
+  ChatMessageRow,
+  GalleryItem,
+  ImageRow,
+  Profile,
+} from "@/lib/types";
 import { getSignedUrl } from "@/lib/storage";
+import { syncImageCredits, type CreditStatus } from "@/lib/credits";
 import {
   Card,
   CardDescription,
@@ -37,11 +44,25 @@ export default async function DashboardPage() {
     .eq("user_id", user!.id)
     .maybeSingle<AiGirl>();
 
+  // Single source of truth for credits (also applies any due monthly reset).
+  const credits: CreditStatus = (await syncImageCredits(supabase)) ?? {
+    plan: profile?.plan ?? "free",
+    limit: profile?.monthly_image_limit ?? 3,
+    used: profile?.image_credits_used_this_month ?? 0,
+    remaining: Math.max(
+      0,
+      (profile?.monthly_image_limit ?? 3) -
+        (profile?.image_credits_used_this_month ?? 0),
+    ),
+    resetDate: profile?.credits_reset_date ?? null,
+  };
+
   const imageUrl = aiGirl
     ? await getSignedUrl(supabase, aiGirl.main_image_url)
     : null;
 
   let chatMessages: ChatMessageRow[] = [];
+  let gallery: GalleryItem[] = [];
   if (aiGirl) {
     const { data: rows } = await supabase
       .from("chat_messages")
@@ -50,12 +71,25 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(50);
     chatMessages = ((rows as ChatMessageRow[] | null) ?? []).reverse();
+
+    const { data: imageRows } = await supabase
+      .from("images")
+      .select("*")
+      .eq("user_id", user!.id)
+      .order("created_at", { ascending: false });
+
+    gallery = await Promise.all(
+      ((imageRows as ImageRow[] | null) ?? []).map(async (img) => ({
+        id: img.id,
+        url: await getSignedUrl(supabase, img.image_url),
+        prompt: img.prompt,
+        image_type: img.image_type,
+        created_at: img.created_at,
+      })),
+    );
   }
 
   const name = profile?.full_name || user?.email?.split("@")[0] || "there";
-  const plan = profile?.plan ?? "free";
-  const limit = profile?.monthly_image_limit ?? 3;
-  const used = profile?.image_credits_used_this_month ?? 0;
 
   return (
     <div className="space-y-8">
@@ -76,8 +110,8 @@ export default async function DashboardPage() {
           <div>
             <p className="font-medium">Profile not found</p>
             <p className="text-muted-foreground">
-              Apply the migrations in <code>supabase/migrations</code> (0001
-              and 0002) in your Supabase SQL editor.
+              Apply the migrations in <code>supabase/migrations</code> (0001,
+              0002, 0003) in your Supabase SQL editor.
             </p>
           </div>
         </div>
@@ -88,9 +122,9 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardDescription>Current plan</CardDescription>
             <CardTitle className="flex items-center gap-2 capitalize">
-              {plan}
+              {credits.plan}
               <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-normal text-muted-foreground">
-                {plan === "pro" ? "20 images/mo" : "3 images/mo"}
+                {credits.plan === "pro" ? "20 images/mo" : "3 images/mo"}
               </span>
             </CardTitle>
           </CardHeader>
@@ -99,7 +133,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardDescription>Image credits this month</CardDescription>
             <CardTitle>
-              {Math.max(0, limit - used)} / {limit}
+              {credits.remaining} / {credits.limit}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -116,6 +150,8 @@ export default async function DashboardPage() {
           aiGirl={aiGirl}
           imageUrl={imageUrl}
           chatMessages={chatMessages}
+          credits={credits}
+          gallery={gallery}
         />
       ) : (
         <CreateCompanionForm />

@@ -46,6 +46,14 @@ export type ImageRow = {
   created_at: string;
 };
 
+export type GalleryItem = {
+  id: string;
+  url: string | null;
+  prompt: string | null;
+  image_type: ImageType;
+  created_at: string;
+};
+
 export type ChatRole = "user" | "assistant";
 
 export type ChatMessageRow = {

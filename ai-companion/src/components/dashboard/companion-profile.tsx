@@ -1,6 +1,11 @@
 import Image from "next/image";
-import { ImageOff, Lock, ImagePlus } from "lucide-react";
-import type { AiGirl, ChatMessageRow } from "@/lib/types";
+import { ImageOff, Lock } from "lucide-react";
+import type {
+  AiGirl,
+  ChatMessageRow,
+  GalleryItem,
+} from "@/lib/types";
+import type { CreditStatus } from "@/lib/credits";
 import {
   Card,
   CardContent,
@@ -9,6 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ChatPanel } from "@/components/dashboard/chat-panel";
+import { ImageGenerator } from "@/components/dashboard/image-generator";
+import { Gallery } from "@/components/dashboard/gallery";
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
@@ -23,10 +30,14 @@ export function CompanionProfile({
   aiGirl,
   imageUrl,
   chatMessages,
+  credits,
+  gallery,
 }: {
   aiGirl: AiGirl;
   imageUrl: string | null;
   chatMessages: ChatMessageRow[];
+  credits: CreditStatus;
+  gallery: GalleryItem[];
 }) {
   return (
     <div className="space-y-6">
@@ -91,20 +102,20 @@ export function CompanionProfile({
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,340px)]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
         <ChatPanel
           companionName={aiGirl.name}
           initialMessages={chatMessages}
         />
-
-        <div className="rounded-lg border border-dashed border-border p-6">
-          <ImagePlus className="size-5 text-muted-foreground" />
-          <p className="mt-3 font-medium">Generate images</p>
-          <p className="text-sm text-muted-foreground">
-            Credit-based image generation and gallery — arriving in Phase 4.
-          </p>
-        </div>
+        <ImageGenerator
+          companionName={aiGirl.name}
+          remaining={credits.remaining}
+          limit={credits.limit}
+          plan={credits.plan}
+        />
       </div>
+
+      <Gallery items={gallery} />
     </div>
   );
 }

@@ -26,8 +26,13 @@ context-aware replies (recent history sent to the model), input moderation,
 in-memory per-user rate limiting, and a polished chat UI with history,
 optimistic send, typing indicator, and empty/error states.
 
-Phases 4–6 (extra image generation, Stripe, polish) are scaffolded as
-dashboard placeholders.
+**Phase 4 complete:** extra image generation with character-consistency
+prompting, atomic server-side monthly credit accounting (Free 3 / Pro 20)
+with automatic period reset and credit refund on failure, moderation +
+rate limiting, an upgrade message when credits run out, and an owner-only
+gallery (main + generated images, with dates).
+
+Phases 5–6 (Stripe subscription, polish) are scaffolded as placeholders.
 
 ## Tech stack
 
@@ -65,6 +70,9 @@ cp .env.example .env.local
      `chat_messages`, `subscriptions` tables, RLS, the atomic
      `create_ai_girl()` function, and the private `companion-images`
      Storage bucket + storage policies.
+   - `supabase/migrations/0003_credits.sql` — atomic credit functions
+     (`sync_image_credits`, `consume_image_credit`, `refund_image_credit`)
+     with automatic monthly reset.
 4. **Authentication → Providers → Email**: keep "Confirm email" enabled.
 5. **Authentication → URL Configuration**:
    - Site URL: `http://localhost:3000`
@@ -88,7 +96,7 @@ the entire creation flow still works without a paid key.
 ## Manual configuration checklist
 
 - [ ] `.env.local` filled with Supabase URL + anon key
-- [ ] `0001_profiles.sql` then `0002_companion.sql` run in Supabase SQL editor
+- [ ] `0001` → `0002` → `0003` migrations run in order in Supabase SQL editor
 - [ ] `companion-images` bucket exists and is **private** (created by 0002)
 - [ ] Email confirmation enabled in Supabase
 - [ ] `http://localhost:3000/auth/callback` added to Supabase redirect URLs
@@ -146,6 +154,24 @@ the entire creation flow still works without a paid key.
 6. **Safety persona** — ask "are you a real person?"; the companion
    clarifies it is a fictional AI character.
 
+## How to test Phase 4 locally
+
+1. **Generate** — in the "Generate an image" panel, enter a scene and
+   submit. The new image appears in the gallery (real or placeholder) and
+   the credit count drops by one.
+2. **Credit enforcement** — generate until credits hit 0 (Free = 3). The
+   panel switches to an upgrade message; the API returns HTTP 402 and
+   refuses further generation (enforced server-side, not in the UI).
+3. **Refund on failure** — if generation fails, the credit is returned
+   (the count does not drop).
+4. **Monthly reset** — set a row's `credits_reset_date` to the past in
+   Supabase, reload the dashboard; `image_credits_used_this_month` resets
+   to 0 and the date moves to the start of next month.
+5. **Gallery ownership** — images are listed newest-first with dates and a
+   "Main" badge on the original; they load via short-lived signed URLs and
+   RLS keeps them private to the owner.
+6. **Moderation** — a disallowed prompt is rejected with no credit spent.
+
 ## Project structure
 
 ```
@@ -161,18 +187,20 @@ ai-companion/
         signup/page.tsx
       auth/callback/route.ts     # email-confirmation handler -> /login
       api/chat/route.ts          # chat endpoint (rate-limited, moderated)
+      api/images/route.ts        # image gen (credits + moderation + rate)
       dashboard/                 # protected (page, layout, actions.ts)
       terms|privacy|ai-disclaimer/
     components/
-      dashboard/                 # create form, profile, chat panel
+      dashboard/                 # create form, profile, chat, generator, gallery
       ui|auth|legal|site-footer
     lib/
       supabase/                  # client / server / proxy / config
       ai/                        # prompt / moderation / image / chat
       companion/options.ts       # allowed params + strict server parsing
-      rate-limit.ts storage.ts validation.ts types.ts
+      credits.ts rate-limit.ts storage.ts validation.ts types.ts
   supabase/migrations/
     0001_profiles.sql
     0002_companion.sql
+    0003_credits.sql
   .env.example
 ```

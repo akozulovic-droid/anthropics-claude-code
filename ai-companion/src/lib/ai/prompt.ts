@@ -1,5 +1,6 @@
 import type { CompanionParameters } from "@/lib/companion/options";
 import { MIN_AGE } from "@/lib/companion/options";
+import type { AiGirl } from "@/lib/types";
 
 // Deterministic, SFW image prompt builder. Always forces an adult subject and
 // appends hard safety constraints regardless of the selected parameters.
@@ -27,4 +28,31 @@ export function generateAIGirlPrompt(p: CompanionParameters): string {
     "Absolutely no minors or youthful/childlike depictions.";
 
   return [subject, wardrobe, scene, safety].join(" ");
+}
+
+// Gallery prompt for an existing companion. Re-states the fixed identity so
+// the character stays as consistent as possible across generations, then
+// applies the user's requested scene under the same hard safety rules.
+// (Text-only consistency is an MVP limitation — there is no image reference.)
+export function buildGalleryPrompt(
+  aiGirl: AiGirl,
+  userScene: string,
+): string {
+  const age = Math.max(MIN_AGE, Math.floor(aiGirl.age));
+
+  const identity =
+    `The same original fictional adult woman named ${aiGirl.name}, ` +
+    `${age} years old, with ${aiGirl.hair_color.toLowerCase()} hair and ` +
+    `${aiGirl.eye_color.toLowerCase()} eyes, consistent facial features and ` +
+    `appearance, ${aiGirl.style.toLowerCase()} style.`;
+
+  const scene = `Scene requested by the user: ${userScene.trim()}.`;
+
+  const safety =
+    "Keep the same character identity. The subject is a fictional adult who " +
+    "does not resemble any real, famous, or identifiable person. The image " +
+    "must be non-explicit, non-sexual, fully clothed, tasteful, and safe for " +
+    "a general audience. Absolutely no minors or childlike depictions.";
+
+  return [identity, scene, safety].join(" ");
 }
